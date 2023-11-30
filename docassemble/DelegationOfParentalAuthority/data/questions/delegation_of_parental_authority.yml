@@ -1,0 +1,394 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALAnyState:any_state.yml
+---
+metadata:
+  title: >-
+    Delegation of parental authority
+  short title: >-
+    Delegate parental auth.
+  description: |-
+    This interview helps someone in Minnesota delegate parental authority of their child .
+  tags:
+    - "FA-14-00-00-00"
+  authors:
+    - Coleman Silver
+  original_form:
+    - https://www.lawhelpmn.org/sites/default/files/2018-11/Delegation%20of%20Parental%20Authority%20form.pdf
+  help_page_url: >-
+    https://www.revisor.mn.gov/statutes/cite/524.5-211
+  help_page_title: >-
+    2022 Minnesota Statutes
+  allowed_courts: []
+  typical_role: "na"
+  al_weaver_version: "1.10.2"
+  generated_on: "2023-11-12"
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "MN"
+---
+code: |
+  github_repo_name =  'docassemble-DelegationOfParentalAuthority'
+---
+code: |
+  interview_short_title = "Delegation of parental authority"
+---
+code: |
+  al_form_type = "other" 
+---
+objects:
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+---
+sections:
+  - review_delegation_of_parental_authority: Review your answers
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_delegation_of_parental_authority
+code: |
+  # Set the allowed courts for this interview
+  allowed_courts = []
+  nav.set_section("review_delegation_of_parental_authority")
+  user_role = "na"
+  user_ask_role = "na"
+  users.gather()
+  set_parts(subtitle=str(users))
+  filing_county
+  set_progress(20)
+  duration_one_year
+  children.gather()
+  children[0].birthdate
+  set_progress(40)
+  attorneys.gather()
+  signature_date
+  attorneys_signature_date
+  set_progress(60)
+  interview_order_delegation_of_parental_authority = True
+---
+###################### Main order ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: True
+code: |
+  al_intro_screen
+  delegation_of_parental_authority_intro
+  interview_order_delegation_of_parental_authority
+  signature_date
+  # Store anonymous data for analytics / statistics
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  delegation_of_parental_authority_download
+---
+comment: |
+  This question is used to introduce your interview. Please customize
+id: Delegation_of_parental_authority
+continue button field: delegation_of_parental_authority_intro
+question: |
+  Delegation of parental authority
+subquestion: |
+  This interview will help you delegation of parental authority. A Delegation of Parental Authority (DOPA) is a document that lets someone take care of your children when you can’t. The person you give this permission to is called an “Attorney-in-Fact.”
+  
+  When you are finished, you will need to:
+  
+  1. Sign the document (in the presence of a notary);
+  2. Have the Attorney-in-Fact sign the document (in the presence of a notary);
+  3. Have the document signed by a notary.
+  
+  Most people take about 15 minutes to finish this interview.
+---
+id: Children
+question: |
+  % if al_form_type in ['starts_case','existing_case','appeal']:
+  Are any children involved in this case?
+  % else:
+  Are any children involved in this matter?
+  % endif  
+fields:
+  - no label: children.there_are_any
+    datatype: yesnoradio
+---
+id: who will be on this form
+generic object: ALPeopleList
+question: |
+  Have you determined who will serve as your attorney-in-fact?
+fields:
+  - no label: x.there_are_any
+    datatype: yesnoradio
+---
+id: name of the first person
+sets:
+  - x[0].name.first
+  - x[0].name.last
+  - x[0].name.middle
+  - x[0].name.suffix
+question: |
+  What is the name of the attorney-in-fact?
+fields:
+  - code: |
+      attorneys_name_full__1
+---
+id: County
+question: |
+  County
+subquestion: |
+  The county where you live and will be filing the DOPA form.
+fields:
+  - "What county do you live in?": filing_county
+    maxlength: 22
+---
+id: Duration
+question: |
+  Duration
+subquestion: |
+  A DOPA is only good for one year and needs to be signed in front of a notary public. You will need to file a new DOPA every year. 
+  
+  If you want, you can make it for less than a year. (check one option)
+fields:
+  - "Duration will be one full year.": duration_one_year
+    datatype: yesno
+  - "Duration will end on a specific date (less than one full year).": duration_specific_date
+    datatype: yesno
+  - "Date of expiration (only if less than one full year).": expiration_date
+    datatype: date
+    required: False
+---
+id: Date of Attorney in Fact signature
+question: |
+  Date of Attorney-in-Fact signature.
+fields:
+  - "What is the date the Attorney-in-Fact will sign the document?": attorneys_signature_date
+    datatype: date
+---
+id: preview delegation_of_parental_authority
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_court_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_delegation_of_parental_authority'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: delegation_of_parental_authority_preview_question    
+---
+code: |
+  signature_fields = ['users[0].signature', 'attorneys[0].signature']
+---
+code: |
+  # This is a placeholder for the addresses that will be searched
+  # for matching address to court. Edit if court venue is based on 
+  # a different address than the user's
+  [user.address.address for user in users.complete_elements()]
+  addresses_to_search = [user.address for user in users.complete_elements()]
+---
+id: delegation of parental authority review screen
+event: review_delegation_of_parental_authority
+question: |
+  Review your answers
+review:
+  - Edit: filing_county
+    button: |
+      **What county do you live in?**:
+      ${ filing_county }
+  - Edit: users.revisit
+    button: |
+      **Users**
+
+      % for item in users:
+        * ${ item }
+      % endfor
+  - Edit: children.revisit
+    button: |
+      **Children**
+
+      % for item in children:
+        * ${ item }
+      % endfor
+  - Edit: attorneys.revisit
+    button: |
+      **Attorneys**
+
+      % for item in attorneys:
+        * ${ item }
+      % endfor
+  - Edit: duration_one_year
+    button: |
+      **Duration will be one full year.**:
+      ${ word(yesno(duration_one_year)) }
+  - Edit: expiration_date
+    button: |
+      **Date of expiration (less than one full year).**:
+      ${ expiration_date }
+  - Edit: duration_specific_date
+    button: |
+      **Duration will end on a specific date (less than one full year).**:
+      ${ word(yesno(duration_specific_date)) }
+  - Edit: signature_date
+    button: |
+      **Date of signature**:
+      ${ signature_date }
+  - Edit: user1_name__full
+    button: |
+      **What is your name?**:
+      ${ user1_name__full }
+  - Edit: attorneys_signature_date
+    button: |
+      **What is the date the Attorney-in-Fact will sign the document?**:
+      ${ attorneys_signature_date }
+---
+continue button field: users.revisit
+question: |
+  Edit users
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Signature: |
+      row_item.signature if defined("row_item.signature") else ""
+edit:
+  - name.first
+  - signature
+confirm: True
+
+---
+continue button field: children.revisit
+question: |
+  Edit children
+subquestion: |
+  ${ children.table }
+
+  ${ children.add_action() }
+---
+table: children.table
+rows: children
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Birthdate: |
+      row_item.birthdate if defined("row_item.birthdate") else ""
+edit:
+  - name.first
+  - birthdate
+confirm: True
+# interview order block
+code: |
+  if birthdate.age_in_years() > 18:
+    kickout_screen
+---
+event: kickout_screen
+question: |
+  Your child is under 18 year old
+subquestion: |
+  Sorry, the child must be under 18 years old, this interview is not for you
+---
+continue button field: attorneys.revisit
+question: |
+  Edit attorneys
+subquestion: |
+  ${ attorneys.table }
+
+  ${ attorneys.add_action() }
+---
+table: attorneys.table
+rows: attorneys
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Signature: |
+      row_item.signature if defined("row_item.signature") else ""
+edit:
+  - name.first
+  - signature
+confirm: True
+
+---
+id: download delegation_of_parental_authority
+event: delegation_of_parental_authority_download
+question: |
+  All done
+subquestion: |
+  Thank you ${users}. Your form is ready to download and deliver.
+  
+  View, download and send your form below. Click the "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_delegation_of_parental_authority'), label='Edit answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - delegation_of_parental_authority_Post_interview_instructions: ALDocument.using(title="Instructions", filename="delegation_of_parental_authority_next_steps.docx", enabled=True, has_addendum=False)
+  - delegation_of_parental_authority_attachment: ALDocument.using(title="Delegation of parental authority", filename="delegation_of_parental_authority", enabled=True, has_addendum=False, )
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[delegation_of_parental_authority_Post_interview_instructions, delegation_of_parental_authority_attachment], filename="delegation_of_parental_authority", title="All forms to download for your records", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[delegation_of_parental_authority_attachment],  filename="delegation_of_parental_authority", title="All forms to deliver to court", enabled=True)
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same template is 
+# used for "preview" and "final" keys, and logic in the template checks the value of 
+# `i` to show or hide the user's signature
+attachment:
+  name: Post-interview-Instructions
+  filename: delegation_of_parental_authority_next_steps
+  docx template file: delegation_of_parental_authority_next_steps.docx
+  variable name: delegation_of_parental_authority_Post_interview_instructions[i]
+  skip undefined: True
+  tagged pdf: True
+---
+attachment:
+  name: delegation of parental authority
+  filename: delegation_of_parental_authority
+  variable name: delegation_of_parental_authority_attachment[i]
+  skip undefined: True
+  pdf template file: delegation_of_parental_authority.pdf
+  fields:
+      - "filing_county": ${ filing_county }
+      - "users1_name_full": ${ users[0] }
+      - "children_name_full": ${ children[0] }
+      - "children_name_full__1": ${ children[0] }
+      - "children_name_full__2": ${ children[0] }
+      - "children_birthdate": ${ children[0].birthdate.format() }
+      - "attorneys_name_full__1": ${ attorneys[0] }
+      - "attorneys_name_full__2": ${ attorneys[0] }
+      - "duration_one_year": ${ duration_one_year }
+      - "duration_specific_date": ${ duration_specific_date }
+      - "expiration_date": ${ expiration_date.format() }
+      - "signature_date": ${ signature_date }
+      - "user1_name__full__1": ${ user1_name__full }
+      - "users1_signature": ${ users[0].signature }
+      - "user1_name__full__2": ${ user1_name__full }
+      - "attorneys_signature_date": ${ attorneys_signature_date.format() }
+      - "attorneys_signature": ${ attorneys[0].signature_if_final(i) }
+
+
+
