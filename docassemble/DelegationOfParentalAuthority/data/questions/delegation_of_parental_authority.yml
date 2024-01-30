@@ -62,11 +62,17 @@ code: |
   set_parts(subtitle=str(users))
   filing_county
   set_progress(20)
-  duration_one_year
+  duration_of_delegation
   children.gather()
+  if not children.there_are_any:
+    kickout_screen_no_children
   children[0].birthdate
+  if children[0].age_in_years() > 18:
+    kickout_screen
   set_progress(40)
   attorneys.gather()
+  if not x.there_are_any:
+    kickout_screen_no_attorney_in_fact
   signature_date
   attorneys_signature_date
   set_progress(60)
@@ -105,7 +111,8 @@ subquestion: |
   
   1. Sign the document (in the presence of a notary);
   2. Have the Attorney-in-Fact sign the document (in the presence of a notary);
-  3. Have the document signed by a notary.
+  3. Have the document signed by a notary;
+  4. File with the court. 
   
   Most people take about 15 minutes to finish this interview.
 ---
@@ -157,15 +164,60 @@ subquestion: |
   
   If you want, you can make it for less than a year. (check one option)
 fields:
-  - "Duration will be one full year.": duration_one_year
-    datatype: yesno
-  - "Duration will end on a specific date (less than one full year).": duration_specific_date
-    datatype: yesno
-  - "Date of expiration (only if less than one full year).": expiration_date
+  - "no label": duration_of_delegation
+    datatype: radio
+    choices:
+      - "Duration will be one full year.": duration_one_year
+      - "Duration will end on a specific date (less than one full year).": duration_specific_date
+  - "Date of expiration": expiration_date
     datatype: date
     required: False
+    show if: 
+      variable: duration_of_delegation
+      is: duration_specific_date
+    max: ${ today().plus(days=364).format('yyyy-MM-dd') }
+    min: ${ today().format('yyyy-MM-dd') }
 ---
-id: Date of Attorney in Fact signature
+id: how many children
+comment: |
+  This question is not likely to be used as-is, because the user
+  is likely to need to know which children to list on the form.
+  
+  That will be very context-specific.
+question: |
+  % if al_form_type in ['starts_case','existing_case','appeal']:
+  Are any children involved in this case?
+  % else:
+  Are any children involved in this matter?
+  % endif  
+fields:
+  - no label: children.there_are_any
+    datatype: yesnoradio
+  - How many?: children.target_number
+    datatype: integer
+    show if: children.there_are_any
+validation code: |
+  if not children.there_are_any:
+    children.target_number = 0
+---
+id: name of the first person
+sets:
+  - x[0].name.first
+  - x[0].name.last
+  - x[0].name.middle
+  - x[0].name.suffix
+generic object: ALPeopleList
+question: |
+  % if hasattr(x, 'ask_number') and x.ask_number and x.target_number == 1:
+  Name of attorney-in-fact
+  % else:
+  Name of attorney-in-fact
+  % endif
+fields:
+  - code: |
+      x[0].name_fields()
+---
+id: Date of Attorney-in-Fact signature
 question: |
   Date of Attorney-in-Fact signature.
 fields:
@@ -228,10 +280,10 @@ review:
       % for item in attorneys:
         * ${ item }
       % endfor
-  - Edit: duration_one_year
+  - Edit: duration_of_delegation
     button: |
       **Duration will be one full year.**:
-      ${ word(yesno(duration_one_year)) }
+      ${ duration_of_delegation }
   - Edit: expiration_date
     button: |
       **Date of expiration (less than one full year).**:
@@ -293,16 +345,24 @@ edit:
   - name.first
   - birthdate
 confirm: True
-# interview order block
-code: |
-  if birthdate.age_in_years() > 18:
-    kickout_screen
 ---
 event: kickout_screen
 question: |
-  Your child is under 18 year old
+  Your child is over 18 year old
 subquestion: |
   Sorry, the child must be under 18 years old, this interview is not for you
+---
+event: kickout_screen_no_attorney_in_fact
+question: |
+  You must assign an attorney in fact
+subquestion: |
+  Sorry, you must determine who you will assign as attorney-in-fact in order to complete this interview.
+---
+event: kickout_screen_no_children
+question: |
+  This form requires the involvement of a child
+subquestion: |
+  Sorry, you there must be a child which you would like to assign an attorney-in-fact in order to complete this interview.
 ---
 continue button field: attorneys.revisit
 question: |
@@ -380,8 +440,8 @@ attachment:
       - "children_birthdate": ${ children[0].birthdate.format() }
       - "attorneys_name_full__1": ${ attorneys[0] }
       - "attorneys_name_full__2": ${ attorneys[0] }
-      - "duration_one_year": ${ duration_one_year }
-      - "duration_specific_date": ${ duration_specific_date }
+      - "duration_one_year": ${ duration_of_delegation=="duration_one_year" }
+      - "duration_specific_date": ${ duration_of_delegation=="duration_specific_date" }
       - "expiration_date": ${ expiration_date.format() }
       - "signature_date": ${ signature_date }
       - "user1_name__full__1": ${ user1_name__full }
