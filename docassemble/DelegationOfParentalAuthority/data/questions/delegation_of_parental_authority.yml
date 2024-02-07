@@ -71,7 +71,7 @@ code: |
     kickout_screen
   set_progress(40)
   attorneys.gather()
-  if not x.there_are_any:
+  if not attorneys.there_are_any:
     kickout_screen_no_attorney_in_fact
   signature_date
   attorneys_signature_date
@@ -127,6 +127,10 @@ fields:
   - no label: children.there_are_any
     datatype: yesnoradio
 ---
+objects:
+  - users: ALPeopleList.using(there_are_any=True)
+  - children: ALPeopleList.using(ask_number=True, target_number=1)
+---
 id: who will be on this form
 generic object: ALPeopleList
 question: |
@@ -134,6 +138,22 @@ question: |
 fields:
   - no label: x.there_are_any
     datatype: yesnoradio
+---
+id: any other users
+question: |
+  % if al_form_type in ['starts_case','existing_case','appeal']:
+  Is anyone else on your side of this case?
+  % else:
+  Is anyone else adding their name to this form with you?
+  % endif
+subquestion: |
+  % if len(users.elements) > 1:  
+  So far you have told us about ${comma_and_list(users.complete_elements())}.
+  % endif
+fields:
+  - no label: users.there_is_another
+    datatype: yesnoradio
+
 ---
 id: name of the first person
 sets:
@@ -146,6 +166,27 @@ question: |
 fields:
   - code: |
       attorneys_name_full__1
+---
+objects:
+  - users: ALPeopleList.using(there_are_any=True) # Will prompt one at a time
+  - attorneys: ALPeopleList.using(ask_number=True, target_number=1)
+---
+id: name of the first person
+sets:
+  - x[0].name.first
+  - x[0].name.last
+  - x[0].name.middle
+  - x[0].name.suffix
+generic object: ALPeopleList
+question: |
+  % if hasattr(x, 'ask_number') and x.ask_number and x.target_number == 1:
+  Name of attorney-in-fact
+  % else:
+  Name of attorney-in-fact
+  % endif
+fields:
+  - code: |
+      x[0].name_fields()
 ---
 id: County
 question: |
@@ -193,35 +234,18 @@ question: |
 fields:
   - no label: children.there_are_any
     datatype: yesnoradio
-  - How many?: children.target_number
+  - How many?: children.target_number 
     datatype: integer
     show if: children.there_are_any
 validation code: |
   if not children.there_are_any:
     children.target_number = 0
 ---
-id: name of the first person
-sets:
-  - x[0].name.first
-  - x[0].name.last
-  - x[0].name.middle
-  - x[0].name.suffix
-generic object: ALPeopleList
-question: |
-  % if hasattr(x, 'ask_number') and x.ask_number and x.target_number == 1:
-  Name of attorney-in-fact
-  % else:
-  Name of attorney-in-fact
-  % endif
-fields:
-  - code: |
-      x[0].name_fields()
----
 id: Date of Attorney-in-Fact signature
 question: |
-  Date of Attorney-in-Fact signature.
+  Date of signatures (both you and your Attorney-in-Fact must sign the form in the presence of a notary).
 fields:
-  - "What is the date the Attorney-in-Fact will sign the document?": attorneys_signature_date
+  - "What is the date the which you and your Attorney-in-Fact will sign the document?": attorneys_signature_date
     datatype: date
 ---
 id: preview delegation_of_parental_authority
@@ -362,7 +386,7 @@ event: kickout_screen_no_children
 question: |
   This form requires the involvement of a child
 subquestion: |
-  Sorry, you there must be a child which you would like to assign an attorney-in-fact in order to complete this interview.
+  Sorry, there must be a child which you would like to assign an attorney-in-fact in order to complete this interview.
 ---
 continue button field: attorneys.revisit
 question: |
