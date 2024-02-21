@@ -43,7 +43,8 @@ code: |
   al_form_type = "other" 
 ---
 objects:
-  - users: ALPeopleList.using(ask_number=True,target_number=1)
+  - users: ALPeopleList.using(ask_number=True, target_number=1)
+  - other_parties: ALPeopleList.using(ask_number=True, target_number=0)
 ---
 sections:
   - review_delegation_of_parental_authority: Review your answers
@@ -105,7 +106,7 @@ continue button field: delegation_of_parental_authority_intro
 question: |
   Delegation of parental authority
 subquestion: |
-  This interview will help you delegation of parental authority. A Delegation of Parental Authority (DOPA) is a document that lets someone take care of your children when you can’t. The person you give this permission to is called an “Attorney-in-Fact.”
+  This interview will help you delegation of parental authority. A Delegation of Parental Authority (DOPA) is a document that lets someone take care of your children when you can’t. The person you give this permission to is called an “Attorney-in-Fact.” The Attorney-in-Fact does not need to be a licensed attorney. 
   
   When you are finished, you will need to:
   
@@ -114,7 +115,7 @@ subquestion: |
   3. Have the document signed by a notary;
   4. File with the court. 
   
-  Most people take about 15 minutes to finish this interview.
+  Most people take about 10 minutes to finish this interview.
 ---
 id: Children
 question: |
@@ -139,22 +140,6 @@ fields:
   - no label: x.there_are_any
     datatype: yesnoradio
 ---
-id: any other users
-question: |
-  % if al_form_type in ['starts_case','existing_case','appeal']:
-  Is anyone else on your side of this case?
-  % else:
-  Is anyone else adding their name to this form with you?
-  % endif
-subquestion: |
-  % if len(users.elements) > 1:  
-  So far you have told us about ${comma_and_list(users.complete_elements())}.
-  % endif
-fields:
-  - no label: users.there_is_another
-    datatype: yesnoradio
-
----
 id: name of the first person
 sets:
   - x[0].name.first
@@ -168,7 +153,7 @@ fields:
       attorneys_name_full__1
 ---
 objects:
-  - users: ALPeopleList.using(there_are_any=True) # Will prompt one at a time
+  - users: ALPeopleList.using(ask_number=True, target_number=1)
   - attorneys: ALPeopleList.using(ask_number=True, target_number=1)
 ---
 id: name of the first person
